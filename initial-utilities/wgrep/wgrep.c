@@ -4,32 +4,15 @@
 #include <string.h>
 
 void wgrep_stream(FILE *stream, const char *pattern) {
-  char *line = NULL;
-  size_t len = 0;
-  size_t pattern_len = strlen(pattern);
-  // getting each line of texts
-  while (getline(&line, &len, stream) != -1) {
-    // searching for match by iterating sequentially
-    size_t line_len = strlen(line);
-    // ignoring this line if the pattern is larger than it
-    if (pattern_len > line_len) {
+  char *line = NULL; // line allocated to this buffer
+  size_t cap = 0;    // the capacity of the buffer
+  // getting each line of texts, passed by reference bc they'll be modified
+  while (getline(&line, &cap, stream) != -1) {
+    // searching for the search match text inside the line
+    if (strstr(line, pattern) == NULL) {
       continue;
     }
-
-    for (int i = 0; i < line_len - pattern_len + 1; ++i) {
-      bool match = true;
-      for (int j = 0; j < pattern_len; ++j) {
-        if (pattern[j] != line[j + i]) {
-          match = false;
-          break;
-        }
-      }
-      if (!match) {
-        continue;
-      }
-      fputs(line, stdout);
-      break;
-    }
+    fputs(line, stdout);
   }
   // free the getline allocation
   free(line);
@@ -40,7 +23,7 @@ void wgrep(const char *path, const char *pattern) {
     wgrep_stream(stdin, pattern);
     return;
   }
-  // opening file
+  // opening file stream
   FILE *fp = fopen(path, "r");
   if (fp == NULL) {
     fputs("wgrep: cannot open file\n", stdout);
@@ -48,12 +31,13 @@ void wgrep(const char *path, const char *pattern) {
   }
   // using opend file as the stream
   wgrep_stream(fp, pattern);
+  fclose(fp);
 }
 
 int main(int argc, char *argv[]) {
   if (argc == 1) {
     fputs("wgrep: searchterm [file ...]\n", stdout);
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
   char *pattern = argv[1];
   if (argc == 2) {
